@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:14.0
+    restart: always 
+    environment:
+      - POSTGRES_USER=virgoUser
+      - POSTGRES_PASSWORD=virgoPassword 
+    volumes:
+      - virgo_db_data:/var/lib/postgresql/data
+    networks:
+      - virgo_backend_tier
+
+  virgo:
+    restart: always
+    build: .
+    depends_on: 
+      - db
+    env_file: .env
+    command: python manage.py runserver 0.0.0.0:8001
+    links:
+      - db:postgres
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8001"
+    expose:
+      - "8002"
+    networks:
+      - virgo_backend_tier
+
+volumes:
+  virgo_db_data:
+    driver: local 
+  static_volume:
+    driver: local
+
+networks:
+  virgo_backend_tier: 
+    driver: bridge
