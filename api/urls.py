@@ -13,5 +13,10 @@ urlpatterns = [
     path('products/category/<int:category_id>/', ProductListByCategoryView.as_view(), name='product-by-category'),
     path('products/create/', ProductCreateView.as_view(), name='product-create'),
     path('products/all/', ProductListView.as_view(), name='products-list'),
+
+
+    #User
+    path('otp/', OTPGenerationView.as_view(), name='otp-generation'),
+    path('otp/verify/', OTPVerificationView.as_view(), name='otp-verification'),
 ]
 

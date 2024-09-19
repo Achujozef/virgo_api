@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import *
-
+from .helpers import *
 ###########################  Category ##################################
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -98,3 +98,28 @@ class ProductSerializer(serializers.ModelSerializer):
             })
 
         return data
+    
+
+############################ User ##########################
+
+class OTPSerializer(serializers.Serializer):
+    
+    email = serializers.EmailField()
+
+    def create_otp(self):
+        email = self.validated_data['email']
+        otp_instance, created = OTP.objects.get_or_create(email=email)
+        otp_instance.generate_otp()
+        send_otp_email(email, otp_instance.otp)
+        return otp_instance
+    
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'password']
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        ExtendedUserModel.objects.create(user=user)
+        return user

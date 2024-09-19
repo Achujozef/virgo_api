@@ -1,6 +1,9 @@
+
+import random
+from django.utils import timezone
 from django.db import models
 from django.contrib import admin
-
+from django.contrib.auth.models import User
 
 # Create your models here.
 
@@ -63,3 +66,44 @@ class Product(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class ExtendedUserModel(models.Model):
+    def __str__(self):
+        return self.user.username
+    
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+    ]
+
+    USER_TYPE_CHOICES = [
+        ('owner', 'Owner'),
+        ('manager', 'Manager'),
+        ('staff', 'Staff'),
+        ('user', 'User'),
+    ]
+
+    user = models.OneToOneField(User,on_delete=models.CASCADE,related_name='extendedusermodel',blank=True,null=True)
+    phone = models.CharField(max_length=20,blank=True,null=True)
+    profile_photo = models.ImageField(upload_to='profile_photos', blank=True, null=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, null=True)
+    dob = models.DateField(blank=True, null=True)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='user')  
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class OTP(models.Model):
+    email = models.EmailField(unique=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def generate_otp(self):
+        self.otp = f"{random.randint(1000, 9999)}"
+        self.created_at = timezone.now()
+        self.save()
+
+    def is_valid(self):
+        time_elapsed = timezone.now() - self.created_at
+        return time_elapsed.seconds < 300  
