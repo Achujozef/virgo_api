@@ -123,3 +123,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         ExtendedUserModel.objects.create(user=user)
         return user
+    
+class OTPVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)

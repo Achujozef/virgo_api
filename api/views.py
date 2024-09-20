@@ -4,8 +4,11 @@ from rest_framework import status
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import AllowAny
+from drf_yasg.utils import swagger_auto_schema
 
 
+from .otp_utils import verify_otp, get_or_create_user, issue_jwt_token
 from .serializers import *
 from .paginations import ProductPagination
 # Create your views here.
@@ -93,28 +96,38 @@ class OTPGenerationView(generics.CreateAPIView):
             return Response({"message": "OTP sent to email."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class OTPVerificationView(APIView):
-    def post(self, request):
-        email = request.data.get('email')
-        otp = request.data.get('otp')
+class OTPVerificationView(generics.CreateAPIView):
+    serializer_class = OTPVerificationSerializer
+    permission_classes = [AllowAny]
 
-        try:
-            otp_instance = OTP.objects.get(email=email)
-            if otp_instance.is_valid() and otp_instance.otp == otp:
-                user, created = User.objects.get_or_create(email=email, defaults={"username": email})
-                if created:
-                    user.set_unusable_password()  # Since password is not set during OTP login
-                    user.save()
+    @swagger_auto_schema(
+        request_body=OTPVerificationSerializer,
+        responses={
+            200: 'Login/Registration successful with JWT tokens',
+            400: 'Invalid OTP',
+            404: 'OTP not found for this email'
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            otp = serializer.validated_data['otp']
 
-                # Issue JWT token
-                refresh = RefreshToken.for_user(user)
+            if verify_otp(email, otp):
+                user, created = get_or_create_user(email)
+                tokens = issue_jwt_token(user)
+
                 return Response({
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                    'user': UserSerializer(user).data,
+                    'refresh': tokens['refresh'],
+                    'access': tokens['access'],
+                    'user': {
+                        'email': user.email,
+                        'username': user.username,
+                    },
                     'message': 'Login successful' if not created else 'Registration successful'
                 }, status=status.HTTP_200_OK)
 
             return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
-        except OTP.DoesNotExist:
-            return Response({"error": "OTP not found for this email"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
