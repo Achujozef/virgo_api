@@ -129,6 +129,7 @@ class VariantDetail(models.Model):
     variant_options = models.ManyToManyField(VariantOption)  # Many-to-Many for multiple options (e.g., size + color)
     original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)    
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
+    stock = models.PositiveIntegerField(default=0)
     variant_data = models.JSONField(null=True, blank=True)  # Storing variants dynamically as key-value pairs
     def __str__(self):
         variants = ', '.join([f"{key}: {value}" for key, value in self.variant_data.items()])

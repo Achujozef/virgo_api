@@ -74,7 +74,7 @@ class VariantDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VariantDetail
-        fields = ['variant_options', 'original_price', 'current_price', 'variant_data']
+        fields = ['variant_options', 'original_price', 'current_price', 'variant_data','stock']
 
 class VariantTypeSerializer(serializers.ModelSerializer):
     class Meta:
