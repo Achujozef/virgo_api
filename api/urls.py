@@ -18,5 +18,16 @@ urlpatterns = [
     #User
     path('otp/', OTPGenerationView.as_view(), name='otp-generation'),
     path('otp/verify/', OTPVerificationView.as_view(), name='otp-verification'),
+
+    #Variant
+    path('variant-types/', VariantTypeCreateListView.as_view(), name='variant-type-list-create'),
+    path('variant-options/', VariantOptionCreateListView.as_view(), name='variant-option-list-create'),
+
+
+    #Ckecking
+    path('check-token/', CheckTokenView.as_view(), name='check_token'),
+
+
 ]
+
 

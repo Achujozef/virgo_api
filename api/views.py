@@ -1,4 +1,6 @@
 
+from django.http import JsonResponse
+from django.views import View
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
@@ -53,6 +55,7 @@ class ProductCreateView(generics.CreateAPIView):
             product = serializer.save()
             return Response(ProductSerializer(product).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
 class ProductListView(generics.ListAPIView):
     queryset = Product.objects.all()  
@@ -69,6 +72,19 @@ class ProductListByCategoryView(generics.ListAPIView):
 class ProductDetailView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+############################## Variant ##################################
+
+
+# View for creating and listing VariantTypes
+class VariantTypeCreateListView(generics.ListCreateAPIView):
+    queryset = VariantType.objects.all()
+    serializer_class = VariantTypeSerializer
+
+# View for creating and listing VariantOptions
+class VariantOptionCreateListView(generics.ListCreateAPIView):
+    queryset = VariantOption.objects.all()
+    serializer_class = VariantOptionSerializer
 
 
 ############################## User View ##################################
@@ -131,3 +147,9 @@ class OTPVerificationView(generics.CreateAPIView):
             return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class CheckTokenView(View):
+    def post(self, request):
+        token = request.POST.get('token')
+        print("Received Token:", token)  
+        return JsonResponse({"message": "Token received", "token": token})

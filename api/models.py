@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import models
 from django.contrib import admin
 from django.contrib.auth.models import User
-
+from django.contrib.postgres.fields import JSONField 
 # Create your models here.
 
 class Category(models.Model):
@@ -68,6 +68,9 @@ class Product(models.Model):
         return self.name
 
 
+
+
+
 class ExtendedUserModel(models.Model):
     def __str__(self):
         return self.user.username
@@ -107,3 +110,26 @@ class OTP(models.Model):
     def is_valid(self):
         time_elapsed = timezone.now() - self.created_at
         return time_elapsed.seconds < 300  
+    
+class VariantType(models.Model):
+    name = models.CharField(max_length=100)  # e.g., 'Color', 'Size'
+
+    def __str__(self):
+        return self.name
+
+class VariantOption(models.Model):
+    variant_type = models.ForeignKey(VariantType, on_delete=models.CASCADE, related_name='options')
+    option_value = models.CharField(max_length=100)  # e.g., 'Red', 'Large'
+
+    def __str__(self):
+        return f"{self.variant_type.name} - {self.option_value}"
+
+class VariantDetail(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
+    variant_options = models.ManyToManyField(VariantOption)  # Many-to-Many for multiple options (e.g., size + color)
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)    
+    current_price = models.DecimalField(max_digits=10, decimal_places=2)
+    variant_data = models.JSONField(null=True, blank=True)  # Storing variants dynamically as key-value pairs
+    def __str__(self):
+        variants = ', '.join([f"{key}: {value}" for key, value in self.variant_data.items()])
+        return f"{self.product.name} - {variants}"

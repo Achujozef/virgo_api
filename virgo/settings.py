@@ -42,17 +42,29 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'api',
+
+    # Django apps
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    'rest_framework.authtoken',
 ]
 
+
+
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
     'corsheaders.middleware.CorsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "virgo.urls"
@@ -154,10 +166,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     # Other settings as needed
 }
-# CORS_ALLOWED_ORIGINS = [
-#     'http://localhost:3000',
-#     'http://127.0.0.1:3000',
-# ]
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+]
 
 # # If you want to allow any headers and credentials (like cookies)
 # CORS_ALLOW_CREDENTIALS = True
@@ -178,3 +190,76 @@ SERVER_EMAIL = 'achujoseph@trivlogic.com'
 
 # Debug email issues in development
 EMAIL_DEBUG = True  # Set to False in production
+
+SITE_ID = 1
+
+# Allauth settings
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',  # Allauth authentication
+)
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+ACCOUNT_EMAIL_VERIFICATION = "optional"  # Set to 'mandatory' for mandatory email verification
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # Use 'username_email' to allow both username and email
+
+
+# Social Account providers
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'SCOPE': [
+#             'profile',
+#             'email',
+#         ],
+#         'AUTH_PARAMS': {
+#             'access_type': 'online',
+#         }
+#     },
+#     'facebook': {
+#         'METHOD': 'oauth2',
+#         'SCOPE': ['email'],
+#         'AUTH_PARAMS': {
+#             'auth_type': 'reauthenticate'
+#         },
+#         'INIT_PARAMS': {
+#             'cookie': True,
+#         },
+#         'FIELDS': [
+#             'id',
+#             'email',
+#             'name',
+#             'first_name',
+#             'last_name',
+#         ],
+#         'EXCHANGE_TOKEN': True,
+#         'VERIFIED_EMAIL': False,
+#         'VERSION': 'v7.0',
+#     },
+# }
+
+# Other configurations
+ACCOUNT_LOGOUT_ON_GET = True  # Logout on GET request
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'APP': {
+            'client_id': '90492107768-e9dsijejqrtehmqdmn2bv9junq0mac6j.apps.googleusercontent.com',
+            'secret': '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',
+            'key': ''
+        }
+    },
+    # Uncomment Facebook when you have Facebook credentials
+    # 'facebook': {
+    #     'APP': {
+    #         'client_id': 'your-facebook-app-id',
+    #         'secret': 'your-facebook-secret'
+    #     }
+    # }
+}
+
+REST_USE_JWT = True  # For using JWT tokens with dj-rest-auth

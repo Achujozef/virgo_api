@@ -63,10 +63,36 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         return CategoryTreeSerializer(subcategories, many=True).data
     
 
+
+############################ Variant ##########################
+
+class VariantDetailSerializer(serializers.ModelSerializer):
+    variant_options = serializers.PrimaryKeyRelatedField(
+        queryset=VariantOption.objects.all(),
+        many=True
+    )
+
+    class Meta:
+        model = VariantDetail
+        fields = ['variant_options', 'original_price', 'current_price', 'variant_data']
+
+class VariantTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VariantType
+        fields = ['id', 'name']
+
+class VariantOptionSerializer(serializers.ModelSerializer):
+    variant_type = serializers.PrimaryKeyRelatedField(queryset=VariantType.objects.all())
+
+    class Meta:
+        model = VariantOption
+        fields = ['id', 'variant_type', 'option_value']
+
 ############################ Product ##########################
 
 class ProductSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    variants = VariantDetailSerializer(many=True, required=False)  # Add the nested variants
 
     class Meta:
         model = Product
@@ -74,17 +100,15 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'category', 'sku', 
             'original_price', 'current_price', 'size', 'weight', 
             'burning_time', 'color', 'fragrance', 'in_the_box', 
-            'stock', 'tags', 'image_url'
+            'stock', 'tags', 'image_url', 'variants'  # Include variants
         ]
     
     def validate(self, data):
-
         if data['original_price'] < data['current_price']:
             raise serializers.ValidationError({
                 'current_price': "Current price must be less than or equal to the original price."
             })
 
-      
         name = data.get('name', '').strip()
         if len(name) < 3:
             raise serializers.ValidationError({
@@ -98,7 +122,23 @@ class ProductSerializer(serializers.ModelSerializer):
             })
 
         return data
-    
+
+    def create(self, validated_data):
+        variants_data = validated_data.pop('variants', [])
+        product = Product.objects.create(**validated_data)
+
+        # Handle the creation of variants
+        self._create_variants(product, variants_data)
+
+        return product
+
+    def _create_variants(self, product, variants_data):
+        """Helper function to handle variant creation"""
+        for variant_data in variants_data:
+            variant_options = variant_data.pop('variant_options')
+            variant = VariantDetail.objects.create(product=product, **variant_data)
+            variant.variant_options.set(variant_options)  # Set the Many-to-Many field
+            variant.save()
 
 ############################ User ##########################
 
