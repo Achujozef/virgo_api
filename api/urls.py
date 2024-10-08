@@ -63,7 +63,14 @@ urlpatterns = [
     path('offers/<int:pk>/update/', OfferUpdateView.as_view(), name='offer-update'),  # PUT or PATCH update an offer
     path('offers/<int:pk>/delete/', OfferDeleteView.as_view(), name='offer-delete'),  # DELETE remove an offer
 
-    
+
+    #Coupen
+    path('coupons/', CouponListView.as_view(), name='coupon-list'),
+    path('coupons/create/', CouponCreateView.as_view(), name='coupon-create'),
+    path('coupons/<int:pk>/', CouponDetailView.as_view(), name='coupon-detail'),
+    path('coupon-apply/', ApplyCouponView.as_view(), name='apply-coupon'),
+    path('coupon-usage/', CouponUsageListView.as_view(), name='coupon-usage-list'),
+
 ]
 
 

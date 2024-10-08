@@ -260,6 +260,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, required=False)
+    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
 
     class Meta:
         model = Order
@@ -294,3 +295,24 @@ class OfferSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("There is already an active offer for this category.")
         
         return attrs
+    
+############################ Coupen ##########################
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = '__all__'
+
+    def validate(self, data):
+        if data['end_date'] <= data['start_date']:
+            raise serializers.ValidationError("End date must be later than start date.")
+        return data
+    
+class CouponUsageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CouponUsage
+        fields = '__all__'
+
+class ApplyCouponSerializer(serializers.Serializer):
+    coupon_code = serializers.CharField(max_length=50)
+    order_total = serializers.DecimalField(max_digits=10, decimal_places=2)

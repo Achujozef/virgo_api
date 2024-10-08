@@ -240,6 +240,7 @@ class BuyNowView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         cart_item = request.data.get('cart_item')  # expecting {'product_id': 1, 'quantity': 1}
+        order_total = request.data.get('order_total')
         quantity = cart_item.get('quantity', 1)
         product_id = cart_item.get('product_id')
 
@@ -269,6 +270,7 @@ class BuyAllFromCartView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         cart_items = Cart.objects.filter(user=request.user, is_active=True)
+        order_total = request.data.get('order_total')
 
         if not cart_items.exists():
             return Response({"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST)
@@ -352,11 +354,55 @@ class OfferDeleteView(generics.DestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
 
+############################ Coupen ##########################
+# List all coupons
+class CouponListView(generics.ListCreateAPIView):
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+
+# Create a coupon
+class CouponCreateView(generics.CreateAPIView):
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+
+# Coupon detail, update, and delete
+class CouponDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+
+# Track coupon usage by users
+class CouponUsageListView(generics.ListAPIView):
+    queryset = CouponUsage.objects.all()
+    serializer_class = CouponUsageSerializer
 
 
 
 
 
+class ApplyCouponView(APIView):
+    @swagger_auto_schema(request_body=ApplyCouponSerializer)
+    def post(self, request):
+        serializer = ApplyCouponSerializer(data=request.data)
+        if serializer.is_valid():
+            coupon_code = serializer.validated_data.get('coupon_code')
+            order_total = serializer.validated_data.get('order_total')
+
+            try:
+                coupon = Coupon.objects.get(code=coupon_code)
+            except Coupon.DoesNotExist:
+                return Response({"success": False, "message": "Invalid coupon code."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not coupon.is_active or not (coupon.start_date <= timezone.now() <= coupon.end_date):
+                return Response({"success": False, "message": "Coupon is expired or inactive."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if coupon.minimum_order_amount and Decimal(order_total) < coupon.minimum_order_amount:
+                return Response({"success": False, "message": "Order total is less than the minimum required for this coupon."}, status=status.HTTP_400_BAD_REQUEST)
+
+            discounted_price = coupon.apply_discount(Decimal(order_total))
+
+            return Response({"success": True, "discounted_price": discounted_price}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
