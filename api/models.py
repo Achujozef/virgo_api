@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.db import models
 from django.contrib import admin
 from django.contrib.auth.models import User
+from decimal import Decimal
+
 from django.contrib.postgres.fields import JSONField 
 # Create your models here.
 
@@ -134,3 +136,184 @@ class VariantDetail(models.Model):
     def __str__(self):
         variants = ', '.join([f"{key}: {value}" for key, value in self.variant_data.items()])
         return f"{self.product.name} - {variants}"
+    
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wishlists')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlist_items')
+    added_at = models.DateTimeField(auto_now_add=True)  # When the product was added to the wishlist
+
+    class Meta:
+        unique_together = ('user', 'product')  # To prevent duplicates for the same user
+
+    def __str__(self):
+        return f"{self.user.username}'s Wishlist - {self.product.name}"
+    
+
+class Cart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='cart_products')
+    variant = models.ForeignKey(VariantDetail, on_delete=models.SET_NULL, blank=True, null=True, related_name='cart_variant')
+    quantity = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)  # To track active cart items
+
+    def __str__(self):
+        return f"{self.user.user.username}'s cart - {self.product.name} ({self.quantity})"
+
+
+
+class Address(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"{self.address_line_1}, {self.city}, {self.country}"
+    
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('canceled', 'Canceled'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    order_number = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    shipping_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True, related_name='shipping_orders')
+    billing_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True, related_name='billing_orders')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Order {self.order_number} - {self.user.username}"
+
+    def calculate_total(self):
+        total = 0
+        for item in self.items.all():
+            total += item.get_total_price()
+        self.total_price = total
+        self.save()
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    variant = models.ForeignKey(VariantDetail, on_delete=models.SET_NULL, blank=True, null=True)
+    quantity = models.PositiveIntegerField()
+    
+    def __str__(self):
+        return f"{self.product.name} (Order: {self.order.order_number})"
+
+    def get_total_price(self):
+        if self.variant:
+            return self.variant.current_price * self.quantity
+        return self.product.current_price * self.quantity
+    
+
+class Offer(models.Model):
+    OFFER_TYPE_CHOICES = [
+        ('product', 'Product'),
+        ('category', 'Category'),
+    ]
+
+    DISCOUNT_TYPE_CHOICES = [
+        ('percentage', 'Percentage'),
+        ('fixed', 'Fixed Amount'),
+    ]
+
+    name = models.CharField(max_length=255)
+    offer_type = models.CharField(max_length=10, choices=OFFER_TYPE_CHOICES)
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)  # Discount amount or percentage
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+
+    # Relations to Product or Category
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='offers', blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='offers', blank=True, null=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.get_offer_type_display()}"
+
+    def is_valid(self):
+        """Checks if the offer is within the valid time frame."""
+        now = timezone.now()
+        return self.start_date <= now <= self.end_date and self.is_active
+
+    def apply_discount(self, price):
+        """Applies the offer to a given price based on the discount type."""
+        if self.discount_type == 'percentage':
+            return price * (1 - (self.discount_value / 100))
+        elif self.discount_type == 'fixed':
+            return max(price - self.discount_value, Decimal('0.00'))  # Ensure the price doesn't go below zero
+        return price
+    
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPE_CHOICES = [
+        ('percentage', 'Percentage'),
+        ('fixed', 'Fixed Amount'),
+    ]
+
+    code = models.CharField(max_length=50, unique=True)
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    usage_limit_per_user = models.PositiveIntegerField(default=1)  # How many times a user can use this coupon
+    minimum_order_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    # Relations to Product or Category (optional)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='coupons', blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='coupons', blank=True, null=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Coupon {self.code} ({self.discount_type} - {self.discount_value})"
+
+    def is_valid(self, user, order_total):
+        """Check if the coupon is valid for the user and the order."""
+        now = timezone.now()
+        if not (self.start_date <= now <= self.end_date) or not self.is_active:
+            return False
+        
+        if self.minimum_order_amount and order_total < self.minimum_order_amount:
+            return False
+
+        usage_count = CouponUsage.objects.filter(user=user, coupon=self).count()
+        if usage_count >= self.usage_limit_per_user:
+            return False
+
+        return True
+
+    def apply_discount(self, price):
+        """Applies the coupon discount to a given price based on the discount type."""
+        if self.discount_type == 'percentage':
+            return price * (1 - (self.discount_value / 100))
+        elif self.discount_type == 'fixed':
+            return max(price - self.discount_value, Decimal('0.00'))  # Ensure the price doesn't go below zero
+        return price
+
+
+class CouponUsage(models.Model):
+    """Tracks how many times a user has used a coupon."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE)
+    used_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} used {self.coupon.code} on {self.used_at}"

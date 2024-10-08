@@ -32,8 +32,18 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    # authentication_classes=(),
 )
-
+swagger_ui_settings = {
+    'securitySchemes': {
+        'Bearer': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+        }
+    },
+    'security': [{'Bearer': []}],  # Apply Bearer token to all endpoints
+}
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('api/', include('api.urls')),

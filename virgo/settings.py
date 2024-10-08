@@ -157,13 +157,25 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 
+}
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': "JWT Authorization header using the Bearer scheme. Example: 'Authorization: Bearer {token}'",
+        }
+    },
+    'USE_SESSION_AUTH': False,  # Disable session authentication
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     # Other settings as needed
 }
 CORS_ALLOWED_ORIGINS = [

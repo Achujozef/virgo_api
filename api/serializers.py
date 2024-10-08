@@ -167,3 +167,98 @@ class UserSerializer(serializers.ModelSerializer):
 class OTPVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
+
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        username = data.get("username")
+        password = data.get("password")
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if user:
+                if not user.is_active:
+                    raise serializers.ValidationError("User account is disabled.")
+            else:
+                raise serializers.ValidationError("Invalid credentials.")
+        else:
+            raise serializers.ValidationError("Must include 'username' and 'password'.")
+
+        data['user'] = user
+        return data
+
+    def get_tokens(self, user):
+        refresh = RefreshToken.for_user(user)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+############################ Wishlist ##########################
+
+class WishlistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'user', 'product', 'added_at']
+        read_only_fields = ['id', 'added_at']
+
+    # Ensure that a user cannot add the same product multiple times
+    def validate(self, data):
+        user = data['user']
+        product = data['product']
+        if Wishlist.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError("This product is already in the wishlist.")
+        return data
+
+############################ Cart ##########################
+
+class CartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cart
+        fields = ['id', 'user', 'product', 'variant', 'quantity', 'created_at', 'updated_at', 'is_active']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_active']
+
+    def validate(self, data):
+        # Ensure product and variant combination is valid
+        product = data.get('product')
+        variant = data.get('variant')
+
+        if variant and variant.product != product:
+            raise serializers.ValidationError("The variant does not belong to the selected product.")
+        
+        return data
+
+############################ Address ##########################
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'user', 'address_line_1', 'address_line_2', 'city', 'state', 'country', 'postal_code']
+        read_only_fields = ['id', 'user']
+
+############################ Order ##########################
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'variant', 'quantity']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, required=False)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'order_number', 'status', 'total_price', 'shipping_address', 'billing_address', 'created_at', 'updated_at', 'items']
+        read_only_fields = ['id', 'user', 'order_number', 'total_price', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        order = Order.objects.create(**validated_data)
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+        return order
