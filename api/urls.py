@@ -71,6 +71,22 @@ urlpatterns = [
     path('coupon-apply/', ApplyCouponView.as_view(), name='apply-coupon'),
     path('coupon-usage/', CouponUsageListView.as_view(), name='coupon-usage-list'),
 
+    #Testmonials
+    path('testimonials/', TestimonialListView.as_view(), name='testimonial-list'),  # List all testimonials
+    path('testimonials/create/', TestimonialCreateView.as_view(), name='testimonial-create'),  # Create a testimonial
+    path('testimonials/<int:pk>/', TestimonialDetailView.as_view(), name='testimonial-detail'),  # Retrieve a testimonial
+    path('testimonials/<int:pk>/update/', TestimonialUpdateView.as_view(), name='testimonial-update'),  # Update a testimonial
+
+    #Review
+    path('reviews/create/', ReviewCreateView.as_view(), name='review-create'),  # Create a review
+    path('reviews/<int:pk>/', ReviewDetailView.as_view(), name='review-detail'),  # Retrieve a review
+    path('reviews/<int:pk>/update/', ReviewUpdateView.as_view(), name='review-update'),  # Update a review
+    path('products/<int:product_id>/reviews/', ProductReviewListView.as_view(), name='product-review-list'),  # List reviews for a product
+    path('products/<int:product_id>/reviews/approved/', ProductReviewListViewApproved.as_view(), name='product-review-list-approved'),  # List approved reviews for a product
+
+    #Order Message
+    path('orders/<int:order_id>/messages/', OrderMessageListView.as_view(), name='order-message-list'),
+    path('orders/<int:order_id>/messages/create/', OrderMessageCreateView.as_view(), name='order-message-create'),
 ]
 
 

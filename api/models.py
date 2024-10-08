@@ -5,7 +5,7 @@ from django.db import models
 from django.contrib import admin
 from django.contrib.auth.models import User
 from decimal import Decimal
-
+from django.conf import settings
 from django.contrib.postgres.fields import JSONField 
 # Create your models here.
 
@@ -265,6 +265,7 @@ class Order(models.Model):
     billing_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True, related_name='billing_orders')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    remark = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Order {self.order_number} - {self.user.username}"
@@ -388,3 +389,52 @@ class CouponUsage(models.Model):
 
     def __str__(self):
         return f"{self.user} used {self.coupon.code} on {self.used_at}"
+    
+
+class Review(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)  # Assuming you have a Product model
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # User who made the review
+    review_text = models.TextField()  # The content of the review
+    rating = models.PositiveIntegerField(null=True, blank=True)  # Rating, e.g., 1 to 5 stars
+    created_at = models.DateTimeField(auto_now_add=True)  # Automatically set the date when created
+    updated_at = models.DateTimeField(auto_now=True)  # Automatically set the date when updated
+    approved = models.BooleanField(default=False)  # Indicates if the review is approved
+
+    def __str__(self):
+        return f"Review for {self.product} by {self.user.username}: {self.review_text[:50]}..."  # Show the first 50 characters
+
+    class Meta:
+        ordering = ['-created_at']  # Order reviews by latest first
+
+
+
+class Testimonial(models.Model):
+    name = models.CharField(max_length=20)
+    profile_image = models.ImageField(upload_to='testimonials/', null=True, blank=True)
+    testimonial_text = models.TextField()  # The content of the testimonial
+    rating = models.PositiveIntegerField(null=True, blank=True)  # Optional rating, e.g., 1 to 5 stars
+    created_at = models.DateTimeField(auto_now_add=True)  # Automatically set the date when created
+    updated_at = models.DateTimeField(auto_now=True)  # Automatically set the date when updated
+    approved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Testimonial by {self.name}: {self.testimonial_text[:50]}..."  # Show the first 50 characters
+
+    class Meta:
+        ordering = ['-created_at']  # Order testimonials by latest first
+
+
+class Message(models.Model):
+    USER_TYPE_CHOICES = [
+        ('user', 'User'),
+        ('staff', 'Staff'),
+        ('admin', 'Admin'),
+    ]
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='user')
+
+    def __str__(self):
+        return f"Message from {self.sender.username} for Order {self.order.order_number}: {self.content[:50]}"

@@ -405,12 +405,133 @@ class ApplyCouponView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+############################ Testmonials ##########################
+
+# Create Testimonial
+class TestimonialCreateView(generics.CreateAPIView):
+    queryset = Testimonial.objects.all()
+    serializer_class = TestimonialSerializer
+
+# List Testimonials
+class TestimonialListView(generics.ListAPIView):
+    queryset = Testimonial.objects.all()
+    serializer_class = TestimonialSerializer
+
+# Retrieve Testimonial Details
+class TestimonialDetailView(generics.RetrieveAPIView):
+    queryset = Testimonial.objects.all()
+    serializer_class = TestimonialSerializer
+
+# Update Testimonial
+class TestimonialUpdateView(generics.UpdateAPIView):
+    queryset = Testimonial.objects.all()
+    serializer_class = TestimonialSerializer
+    permission_classes = [IsAuthenticated]  # Require authentication to update testimonials
 
 
+############################ Review ##########################
+# Create Review
+class ReviewCreateView(generics.CreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]  # Require authentication to create reviews
+
+# List Reviews
+class ProductReviewListView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]  # Allow any user to see reviews
+
+    def get_queryset(self):
+        product_id = self.kwargs['product_id']  # Get the product ID from the URL
+        return Review.objects.filter(product_id=product_id)  # Filter reviews by product ID
+
+# Retrieve Review Details
+class ReviewDetailView(generics.RetrieveAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+# Update Review
+class ReviewUpdateView(generics.UpdateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]  
+
+# List Reviews for a specific Product
+class ProductReviewListViewApproved(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]  # Allow any user to see reviews
+
+    def get_queryset(self):
+        product_id = self.kwargs['product_id']  # Get the product ID from the URL
+        # Filter reviews by product ID and only include approved reviews
+        return Review.objects.filter(product_id=product_id, approved=True)
+    
 
 
+############################ Order Message ##########################
 
 
+# List messages for a specific order
+class OrderMessageListView(generics.ListAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        order_id = self.kwargs['order_id']
+        return Message.objects.filter(order_id=order_id)
+    
+
+class OrderMessageCreateView(generics.CreateAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        order_id = self.kwargs['order_id']
+        user_type = 'user'  # Default to 'user'
+
+        # Set user_type based on the user's role
+        if self.request.user.is_staff:
+            user_type = 'staff'
+        elif self.request.user.is_superuser:
+            user_type = 'admin'
+
+        # Save the message
+        message = serializer.save(order_id=order_id, sender=self.request.user, user_type=user_type)
+
+        # Determine the recipient based on user type
+        subject = ''
+        email_body = ''
+        recipient_email = ''
+
+        if user_type == 'user':  # If the user sends a message
+            subject = 'New Message from User'
+            email_body = f"User {self.request.user.username} has sent a message: {message.content}"
+            recipient_email = settings.ADMIN_EMAIL  # Assuming admin email is stored in settings
+
+            # Check previous messages sent by the user for this order
+            previous_messages = Message.objects.filter(order_id=order_id, sender=self.request.user).order_by('-created_at')
+
+            if not previous_messages.exists():  # If this is the first message
+                return Response(
+                    {"detail": "Thank you for your message! You are very valuable to us, and we appreciate your order. Our team will contact you shortly."},
+                    status=status.HTTP_201_CREATED
+                )
+            elif (timezone.now() - previous_messages.first().created_at).days >= 1:  # If last message was sent over 24 hours ago
+                return Response(
+                    {"detail": "Thank you for your message! You are very valuable to us, and we appreciate your order. Our team will contact you shortly."},
+                    status=status.HTTP_201_CREATED
+                )
+
+        else:  # If staff/admin responds
+            subject = 'New Message from Admin/Staff'
+            email_body = f"Admin/Staff {self.request.user.username} has responded: {message.content}"
+            recipient_email = message.order.user.email  # The user's email from the order
+
+        # Send email notification
+        send_notification_email(recipient_email, subject, email_body)
+
+        # If the message is from staff/admin, return a standard response
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 

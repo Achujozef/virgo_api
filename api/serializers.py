@@ -264,7 +264,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'order_number', 'status', 'total_price', 'shipping_address', 'billing_address', 'created_at', 'updated_at', 'items']
+        fields = ['id', 'user', 'order_number', 'status', 'total_price', 'shipping_address', 'billing_address', 'remark', 'created_at', 'updated_at', 'items']
         read_only_fields = ['id', 'user', 'order_number', 'total_price', 'created_at', 'updated_at']
 
     def create(self, validated_data):
@@ -316,3 +316,29 @@ class CouponUsageSerializer(serializers.ModelSerializer):
 class ApplyCouponSerializer(serializers.Serializer):
     coupon_code = serializers.CharField(max_length=50)
     order_total = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+############################ Testmonials ##########################
+
+class TestimonialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Testimonial
+        fields = ['id', 'name', 'profile_image', 'testimonial_text', 'rating', 'approved', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+############################ Review ##########################
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'product', 'user', 'review_text', 'rating', 'approved', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+############################ Message ##########################
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = serializers.StringRelatedField()  # To show username instead of user ID
+
+    class Meta:
+        model = Message
+        fields = ['id', 'order', 'sender', 'content', 'created_at', 'user_type']

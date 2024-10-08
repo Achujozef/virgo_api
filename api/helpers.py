@@ -55,3 +55,18 @@ def apply_coupon_to_order(coupon_code, order, user):
     order.save()
     
     return {"success": True, "discounted_price": discounted_price}
+
+
+def send_notification_email(email, subject, message):
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,  # Sender's email
+            [email],  # Recipient's email
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
