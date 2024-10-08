@@ -55,6 +55,15 @@ urlpatterns = [
     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),  # Order detail
     path('orders/<int:pk>/edit/', UpdateOrderView.as_view(), name='edit-order'),  # Update order
     path('orders/<int:pk>/delete/', DeleteOrderView.as_view(), name='delete-order'),  # Delete order
+
+    #Offer
+    path('offers/', OfferListView.as_view(), name='offer-list'),  # GET list of offers
+    path('offers/create/', OfferCreateView.as_view(), name='offer-create'),  # POST create a new offer
+    path('offers/<int:pk>/', OfferDetailView.as_view(), name='offer-detail'),  # GET retrieve an offer
+    path('offers/<int:pk>/update/', OfferUpdateView.as_view(), name='offer-update'),  # PUT or PATCH update an offer
+    path('offers/<int:pk>/delete/', OfferDeleteView.as_view(), name='offer-delete'),  # DELETE remove an offer
+
+    
 ]
 
 

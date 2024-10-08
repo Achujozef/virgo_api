@@ -71,10 +71,15 @@ class VariantDetailSerializer(serializers.ModelSerializer):
         queryset=VariantOption.objects.all(),
         many=True
     )
+    price_with_offer = serializers.SerializerMethodField()
+    
 
     class Meta:
         model = VariantDetail
-        fields = ['variant_options', 'original_price', 'current_price', 'variant_data','stock']
+        fields = ['variant_options', 'original_price', 'current_price', 'price_with_offer','variant_data','stock']
+    
+    def get_price_with_offer(self, obj):
+        return obj.get_variant_price_with_offer()
 
 class VariantTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,15 +98,20 @@ class VariantOptionSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     variants = VariantDetailSerializer(many=True, required=False)  # Add the nested variants
+    price_with_offer = serializers.SerializerMethodField()  # Add this field
 
     class Meta:
         model = Product
         fields = [
             'id', 'name', 'description', 'category', 'sku', 
-            'original_price', 'current_price', 'size', 'weight', 
+            'original_price', 'current_price', 'price_with_offer','size', 'weight', 
             'burning_time', 'color', 'fragrance', 'in_the_box', 
             'stock', 'tags', 'image_url', 'variants'  # Include variants
         ]
+    
+    def get_price_with_offer(self, obj):
+        """This method computes the price after applying any active offer."""
+        return obj.get_price_with_offer()  # This calls the method in the Product model
     
     def validate(self, data):
         if data['original_price'] < data['current_price']:
@@ -262,3 +272,25 @@ class OrderSerializer(serializers.ModelSerializer):
         for item_data in items_data:
             OrderItem.objects.create(order=order, **item_data)
         return order
+    
+
+############################ Offer ##########################
+
+class OfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Offer
+        fields = '__all__'
+
+    def validate(self, attrs):
+        """Validate offer dates and ensure only one active offer per product/category."""
+        if attrs['start_date'] >= attrs['end_date']:
+            raise serializers.ValidationError("End date must be after start date.")
+        
+        if attrs['offer_type'] == 'product':
+            if Offer.objects.filter(product=attrs['product'], is_active=True).exists():
+                raise serializers.ValidationError("There is already an active offer for this product.")
+        elif attrs['offer_type'] == 'category':
+            if Offer.objects.filter(category=attrs['category'], is_active=True).exists():
+                raise serializers.ValidationError("There is already an active offer for this category.")
+        
+        return attrs

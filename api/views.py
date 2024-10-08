@@ -328,8 +328,29 @@ class DeleteOrderView(generics.DestroyAPIView):
         return Order.objects.filter(user=self.request.user)
 
 
+############################ Offer ##########################
 
+# View to list all offers and create a new offer
+class OfferListView(generics.ListAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferSerializer
 
+class OfferCreateView(generics.CreateAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferSerializer
+
+# View to retrieve, update, or delete a specific offer by ID
+class OfferDetailView(generics.RetrieveAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferSerializer
+
+class OfferUpdateView(generics.UpdateAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferSerializer
+
+class OfferDeleteView(generics.DestroyAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferSerializer
 
 
 

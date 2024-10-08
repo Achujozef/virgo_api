@@ -69,6 +69,39 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    def get_price_with_offer(self):
+        """
+        Returns the product price after applying any active offer.
+        If a variant exists, the variant price will be used.
+        """
+        now = timezone.now()
+
+        # Check if there is an active product-specific offer
+        product_offer = Offer.objects.filter(
+            product=self, 
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        ).first()
+
+        if product_offer:
+            # Apply product-level offer
+            return product_offer.apply_discount(self.current_price)
+
+        # Check if there's a category-level offer if no product offer exists
+        category_offer = Offer.objects.filter(
+            category=self.category,
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        ).first()
+
+        if category_offer:
+            # Apply category-level offer
+            return category_offer.apply_discount(self.current_price)
+
+        # No offers available, return the original product price
+        return self.current_price
 
 
 
@@ -135,6 +168,44 @@ class VariantDetail(models.Model):
     variant_data = models.JSONField(null=True, blank=True)  # Storing variants dynamically as key-value pairs
     def __str__(self):
         variants = ', '.join([f"{key}: {value}" for key, value in self.variant_data.items()])
+        return f"{self.product.name} - {variants}"
+    
+    def get_variant_price_with_offer(self):
+        """
+        Returns the variant price after applying any active offer.
+        Offers can apply to either the product or the category.
+        """
+        now = timezone.now()
+
+        # Check if there's a product-specific offer
+        product_offer = Offer.objects.filter(
+            product=self.product,
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        ).first()
+
+        if product_offer:
+            # Apply product-level offer
+            return product_offer.apply_discount(self.current_price)
+
+        # Check for category-level offer if no product offer exists
+        category_offer = Offer.objects.filter(
+            category=self.product.category,
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        ).first()
+
+        if category_offer:
+            # Apply category-level offer
+            return category_offer.apply_discount(self.current_price)
+
+        # No offers available, return the original variant price
+        return self.current_price
+
+    def __str__(self):
+        variants = ', '.join([f"{opt.variant_type.name}: {opt.option_value}" for opt in self.variant_options.all()])
         return f"{self.product.name} - {variants}"
     
 
@@ -255,11 +326,11 @@ class Offer(models.Model):
     def apply_discount(self, price):
         """Applies the offer to a given price based on the discount type."""
         if self.discount_type == 'percentage':
-            return price * (1 - (self.discount_value / 100))
+            discount_amount = price * (self.discount_value / Decimal('100'))
+            return price - discount_amount
         elif self.discount_type == 'fixed':
-            return max(price - self.discount_value, Decimal('0.00'))  # Ensure the price doesn't go below zero
+            return max(price - self.discount_value, Decimal('0'))  # Ensure price doesn't go below 0
         return price
-    
 
 
 class Coupon(models.Model):
