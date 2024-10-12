@@ -153,14 +153,21 @@ class ProductSerializer(serializers.ModelSerializer):
 ############################ User ##########################
 
 class OTPSerializer(serializers.Serializer):
-    
     email = serializers.EmailField()
 
     def create_otp(self):
         email = self.validated_data['email']
-        otp_instance, created = OTP.objects.get_or_create(email=email)
+        
+        existing_otp_instance = OTP.objects.filter(email=email).first()
+        
+        if existing_otp_instance:
+            existing_otp_instance.delete()
+            print(f"Deleted existing OTP instance for email: {email}")
+
+        otp_instance = OTP(email=email)
         otp_instance.generate_otp()
-        send_otp_email(email, otp_instance.otp)
+        print("From OTP Serializer: Created new OTP")
+
         return otp_instance
     
 
