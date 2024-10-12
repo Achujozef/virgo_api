@@ -9,14 +9,17 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from __future__ import absolute_import
 from datetime import timedelta
 from pathlib import Path
 import os
+from celery import Celery
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'virgo.settings')
+app = Celery('virgo')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -275,3 +278,13 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 REST_USE_JWT = True  # For using JWT tokens with dj-rest-auth
+
+
+# Celery Configuration
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

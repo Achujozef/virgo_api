@@ -17,16 +17,38 @@ services:
     build: .
     depends_on: 
       - db
+      - redis   
     env_file: .env
     command: python manage.py runserver 0.0.0.0:8001
     links:
       - db:postgres
+      - redis 
     volumes:
       - .:/app
     ports:
       - "8001:8001"
     expose:
       - "8002"
+    networks:
+      - virgo_backend_tier
+
+  celery:
+    build: .
+    restart: always
+    depends_on:
+      - db
+      - redis   
+    command: celery -A virgo worker --loglevel=info
+    volumes:
+      - .:/app
+    networks:
+      - virgo_backend_tier
+
+  redis:
+    image: redis:alpine
+    restart: always
+    expose:
+      - "6379"
     networks:
       - virgo_backend_tier
 
