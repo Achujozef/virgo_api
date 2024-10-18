@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import Cart ,Coupon , CouponUsage
-from .tasks import send_otp_email_task
+from .tasks import send_otp_email_task , send_notification_email
 
 
 def send_otp_email(email, otp):
@@ -32,13 +32,10 @@ def apply_coupon_to_order(coupon_code, order, user):
     if not coupon.is_valid(user, order.total_price):
         return {"success": False, "message": "Coupon is not valid."}
 
-    # Apply the discount to the total price
     discounted_price = coupon.apply_discount(order.total_price)
 
-    # Track coupon usage
     CouponUsage.objects.create(user=user, coupon=coupon)
     
-    # Update order total
     order.total_price = discounted_price
     order.save()
     
@@ -46,15 +43,4 @@ def apply_coupon_to_order(coupon_code, order, user):
 
 
 def send_notification_email(email, subject, message):
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.EMAIL_HOST_USER,  # Sender's email
-            [email],  # Recipient's email
-            fail_silently=False,
-        )
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
+    send_notification_email.delay(email, subject, message)

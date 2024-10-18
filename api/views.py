@@ -426,7 +426,7 @@ class TestimonialDetailView(generics.RetrieveAPIView):
 class TestimonialUpdateView(generics.UpdateAPIView):
     queryset = Testimonial.objects.all()
     serializer_class = TestimonialSerializer
-    permission_classes = [IsAuthenticated]  # Require authentication to update testimonials
+    permission_classes = [IsAuthenticated]  
 
 
 ############################ Review ##########################
@@ -434,16 +434,15 @@ class TestimonialUpdateView(generics.UpdateAPIView):
 class ReviewCreateView(generics.CreateAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]  # Require authentication to create reviews
+    permission_classes = [IsAuthenticated] 
 
 # List Reviews
 class ProductReviewListView(generics.ListAPIView):
     serializer_class = ReviewSerializer
-    permission_classes = [AllowAny]  # Allow any user to see reviews
-
+    permission_classes = [AllowAny]  
     def get_queryset(self):
-        product_id = self.kwargs['product_id']  # Get the product ID from the URL
-        return Review.objects.filter(product_id=product_id)  # Filter reviews by product ID
+        product_id = self.kwargs['product_id']  
+        return Review.objects.filter(product_id=product_id) 
 
 # Retrieve Review Details
 class ReviewDetailView(generics.RetrieveAPIView):
@@ -459,11 +458,10 @@ class ReviewUpdateView(generics.UpdateAPIView):
 # List Reviews for a specific Product
 class ProductReviewListViewApproved(generics.ListAPIView):
     serializer_class = ReviewSerializer
-    permission_classes = [AllowAny]  # Allow any user to see reviews
+    permission_classes = [AllowAny]  
 
     def get_queryset(self):
-        product_id = self.kwargs['product_id']  # Get the product ID from the URL
-        # Filter reviews by product ID and only include approved reviews
+        product_id = self.kwargs['product_id']  
         return Review.objects.filter(product_id=product_id, approved=True)
     
 
@@ -641,3 +639,27 @@ class LoginView(generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+
+
+
+
+
+def word_frequency(sentence):
+    sentence = sentence.lower().replace(",", "").replace(".", "")
+    words = sentence.split()
+    frequency_dict = {}
+    for word in words:
+        if word in frequency_dict:
+            frequency_dict[word] += 1
+        else:
+            frequency_dict[word] = 1
+    
+    return frequency_dict
+
+sentence = "The man who born now, the garden"
+result = word_frequency(sentence)
+print(result)
